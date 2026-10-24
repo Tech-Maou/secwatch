@@ -88,3 +88,10 @@ def test_registry():
     assert [r["hostname"] for r in reg] == ["adguard.example.org", "", "git.example.org"]
     assert reg[2]["exposure"] == "public"
     assert read_registry("/nonexistent") == []
+
+
+def test_vulnix_skips_generated_files():
+    data = [{"name": "polkit-1.pam", "pname": "polkit", "version": "1.pam", "affected_by": ["CVE-2021-4034"],
+             "whitelisted": [], "cvssv3_basescore": {"CVE-2021-4034": 7.8}, "description": {}},
+            {"name": "openssh-10.5p1", "affected_by": ["CVE-1"], "whitelisted": [], "cvssv3_basescore": {}, "description": {}}]
+    assert [(f.package, f.installed) for f in parse_vulnix(data, "h")] == [("openssh", "10.5p1")]

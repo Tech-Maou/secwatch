@@ -265,7 +265,7 @@ locked. Secrets are only referenced by file path (`*_file`). Check with
 | `schedule.reports.weekly` | `{enabled: true, weekday: sun, time: "18:00", notify_only_if_open: true}` | |
 | `schedule.reports.monthly` | `{enabled: true, monthday: 1, time: "08:00"}` | |
 | `schedule.reports.retention_days` | `0` | 0 = keep forever |
-| `collectors.nix` | `{enabled: auto, timeout: 1800, whitelist: [], booted_system: true, mirror: ""}` | auto = on NixOS |
+| `collectors.nix` | `{enabled: auto, timeout: 1800, whitelist: [], booted_system: true, scope: runtime, mirror: ""}` | auto = on NixOS; `scope: build` also reports build-time dependencies |
 | `collectors.os` | `{enabled: auto, root: "/", skip_dirs: [...]}` | auto = not NixOS |
 | `collectors.containers` | `{enabled: auto, runtime: auto, socket: "", image_timeout: 900, exclude: []}` | auto = engine found |
 | `collectors.lynis/exposure/secrets/auth/updates/sbom` | see `secwatch/config.py` | phase 2 |

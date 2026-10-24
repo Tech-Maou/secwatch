@@ -46,7 +46,9 @@ def test_run_scan_isolates_failures(cfg, db, fake_vulnix):
     assert res["collectors"]["os"] == {"enabled": False}
     assert res["collectors"]["lynis"]["ok"] and res["collectors"]["lynis"]["implemented"] is False
     cmd = fake_vulnix[0]
-    assert cmd[:2] == ["vulnix", "--json"] and "--system" in cmd and "--cache-dir" in cmd
+    # default scope "runtime": only the installed closure, never the build-time closure (--system)
+    assert cmd[:2] == ["vulnix", "--json"] and cmd[-2:] == ["-C", "/run/current-system"] and "--cache-dir" in cmd
+    assert "--system" not in cmd
     cfg.data["collectors"]["os"]["enabled"] = True
     res2 = scan.run_scan(cfg, db, trigger="test", only=["nix", "os"], notifier=Notifier(cfg, db, senders={"push": rec, "mail": rec}), env=env)
     assert res2["collectors"]["os"]["ok"] is False and "trivy not found" in res2["collectors"]["os"]["error"]

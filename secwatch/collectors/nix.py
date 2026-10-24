@@ -1,4 +1,8 @@
-"""NixOS collector: vulnix against the current (and booted) system closure."""
+"""NixOS collector: vulnix against the current (and booted) system closure.
+
+Default scope "runtime" scans only what is installed (vulnix -C <system>). Scope "build" is
+vulnix --system, which also walks the build-time dependencies (compilers, bootstrap tools,
+libraries of build tools) and reports many packages that are not on the machine."""
 
 from __future__ import annotations
 
@@ -14,6 +18,10 @@ from ..runner import ToolError, run, which
 from . import Collector, register
 
 log = logging.getLogger(__name__)
+
+# Store paths of generated files (e.g. "polkit-1.pam", "foo-2.conf") look like name-version
+_NOT_A_VERSION = re.compile(r"\.(pam|conf|cfg|ini|json|toml|ya?ml|xml|rules|service|socket|timer|target|"
+                            r"mount|path|sh|py|pl|nix|txt|desktop|policy)$", re.I)
 
 _STORE_RE = re.compile(r"^/nix/store/[0-9a-z]{32}-(?P<name>.+?)(\.drv)?$")
 
@@ -45,6 +53,8 @@ def parse_vulnix(data: list, host: str, component: str = "") -> list[Finding]:
             pname, version = split_name(pkg.get("name") or "")
         if not pname:
             pname, version = name_from_store_path(pkg.get("derivation") or "")
+        if _NOT_A_VERSION.search(version):
+            continue
         whitelisted = set(pkg.get("whitelisted") or [])
         scores = pkg.get("cvssv3_basescore") or {}
         descr = pkg.get("description") or {}
@@ -102,7 +112,13 @@ class NixCollector(Collector):
         if not which("vulnix"):
             raise ToolError("vulnix not found on PATH")
         host = self.ctx.host
-        findings = parse_vulnix(self._run(["--system"]), host)
+        runtime = self.settings.get("scope", "runtime") != "build"
+
+        def target(path: str) -> list[str]:
+            # runtime: closure of the output path only; build: the system's full derivation closure
+            return ["-C", path] if runtime else ([path] if path != "/run/current-system" else ["--system"])
+
+        findings = parse_vulnix(self._run(target("/run/current-system")), host)
         if self.settings.get("booted_system", True):
             cur, booted = Path("/run/current-system"), Path("/run/booted-system")
             try:
@@ -111,7 +127,8 @@ class NixCollector(Collector):
                 differs = False
             if differs:
                 seen = {(f.id, f.package) for f in findings}
-                for f in parse_vulnix(self._run([str(booted.resolve())]), host, component="booted-system"):
+                for f in parse_vulnix(self._run(target(str(booted.resolve()))), host,
+                                      component="booted-system"):
                     if (f.id, f.package) not in seen:
                         f.extra["booted_only"] = True
                         findings.append(f)

@@ -125,6 +125,7 @@ DEFAULTS: dict[str, Any] = {
             "timeout": 1800,
             "whitelist": [],  # vulnix whitelist files/URLs (TOML)
             "booted_system": True,
+            "scope": "runtime",  # runtime = installed closure only | build = incl. build-time deps
             "mirror": "",  # alternative NVD mirror for vulnix
         },
         "os": {
@@ -236,6 +237,7 @@ ENUMS: dict[str, list] = {
     "schedule.scan.weekday": WEEKDAYS,
     "schedule.reports.weekly.weekday": WEEKDAYS,
     "collectors.containers.runtime": ["auto", "docker", "podman"],
+    "collectors.nix.scope": ["runtime", "build"],
     "collectors.lynis.frequency": ["daily", "weekly", "monthly"],
     "enrichers.epss.mode": ["csv", "api"],
     "notify.mail.tls": ["starttls", "ssl", "none"],

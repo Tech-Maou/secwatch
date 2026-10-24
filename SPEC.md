@@ -54,7 +54,7 @@ exposure | secret | auth | update | scan_error. Stable key = hash(host, source, 
 
 | Collector | Default | What | Notes |
 |---|---|---|---|
-| `nix` | on (if NixOS) | `vulnix --system --json` (+ `/run/booted-system` if different) | respect vulnix whitelist file; map store paths → package names |
+| `nix` | on (if NixOS) | `vulnix -C /run/current-system --json` = installed (runtime) closure only (+ `/run/booted-system` if different); `scope: build` = `vulnix --system` incl. build-time deps | respect vulnix whitelist file; map store paths → package names |
 | `os` | on (if not NixOS) | `trivy rootfs --scanners vuln /` | Debian/Ubuntu/Alpine/RHEL… |
 | `containers` | on (if docker/podman present) | list images in use (`podman/docker ps --format json`), `trivy image --input` or by ref | component = container name |
 | `lynis` | on, monthly | `lynis audit system --quick --no-colors` → hardening index + warnings + suggestions | findings kind=hardening, severity from warning(=medium)/suggestion(=low) |
