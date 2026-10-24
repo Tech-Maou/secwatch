@@ -1,0 +1,10 @@
+[
+ {"AutoRemove": false, "Command": ["nginx", "-g", "daemon off;"], "Created": 1729760000, "Exited": false,
+  "Id": "3f9a1c0b2d4e5f60718293a4b5c6d7e8f9012345678901234567890abcdef12", "Image": "docker.io/library/nginx:1.27-alpine",
+  "ImageID": "4a8f9a3b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f", "Names": ["web"], "Pod": "", "Ports": [],
+  "State": "running", "Status": "Up 3 days"},
+ {"Id": "aa11bb22cc33dd44ee55ff6677889900aabbccddeeff00112233445566778899", "Image": "ghcr.io/example/app:2.1",
+  "ImageID": "bb22", "Names": ["app"], "State": "running", "Status": "Up 3 days"},
+ {"Id": "cc33", "Image": "docker.io/library/nginx:1.27-alpine", "ImageID": "4a8f9a3b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+  "Names": ["web2"], "State": "running", "Status": "Up 1 hour"}
+]

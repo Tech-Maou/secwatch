@@ -1,0 +1,39 @@
+# secwatch scanner: runs as root (reads the whole file system, journald, container socket),
+# writes only to the state directory. Started by secwatch-scan.timer and secwatch-scan.path.
+# Needs trivy (and vulnix on NixOS) and iproute2 on PATH.
+[Unit]
+Description=secwatch scanner
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=secwatch
+SupplementaryGroups=systemd-journal
+Environment=SECWATCH_STATE_DIR=/var/lib/secwatch
+Environment=HOME=/var/lib/secwatch/cache
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+ExecStart=/opt/secwatch/bin/secwatch-scan scan --if-due
+UMask=0007
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=4h
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/secwatch
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_FOWNER CAP_CHOWN CAP_SYS_PTRACE CAP_NET_ADMIN

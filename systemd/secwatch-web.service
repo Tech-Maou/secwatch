@@ -1,0 +1,40 @@
+# secwatch web UI (pip install path). Install the package into /opt/secwatch:
+#   python3 -m venv /opt/secwatch && /opt/secwatch/bin/pip install /path/to/secwatch
+[Unit]
+Description=secwatch web UI and API
+After=network.target
+
+[Service]
+User=secwatch
+Group=secwatch
+Environment=SECWATCH_STATE_DIR=/var/lib/secwatch
+# Environment=SECWATCH_OVERRIDES=/etc/secwatch/overrides.yaml
+ExecStart=/opt/secwatch/bin/secwatch-web
+Restart=on-failure
+RestartSec=5
+UMask=0007
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/secwatch
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

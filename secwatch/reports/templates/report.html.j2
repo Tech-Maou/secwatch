@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>secwatch – {{ t('report.kind.' ~ r.kind) }} {{ r.period }}</title>
+<style>
+:root{--bg:#0f1218;--card:#171b23;--line:#262c38;--fg:#e4e7ee;--mute:#8b93a7;--crit:#ff4d6d;--high:#ff8c42;--med:#f6c344;--low:#5fb7ff;--unk:#8b93a7;--ok:#3ecf8e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:24px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:28px 0 10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.meta{color:var(--mute);font-size:12px}
+.cards{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-width:120px}
+.card b{display:block;font-size:22px}.card span{color:var(--mute);font-size:12px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:500;font-size:12px}
+tr:last-child td{border-bottom:0}
+.sev{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;color:#111}
+.sev.critical{background:var(--crit)}.sev.high{background:var(--high)}.sev.medium{background:var(--med)}.sev.low{background:var(--low)}.sev.unknown,.sev.none{background:var(--unk)}
+.kev{background:#7a1022;color:#fff;border-radius:4px;padding:0 5px;font-size:11px;margin-left:4px}
+.pos{color:var(--crit)}.neg{color:var(--ok)}
+a{color:var(--low)}
+.empty{color:var(--mute);padding:12px;background:var(--card);border-radius:10px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<h1>secwatch · {{ t('report.kind.' ~ r.kind) }} · {{ r.period }}</h1>
+<div class="meta">{{ t('report.generated') }} {{ r.generated_at }} · {{ t('report.hosts') }}: {{ r.hosts|join(', ') or '–' }} · v{{ r.version }}</div>
+
+{% macro rows(items, show_age=False, show_fixed=False) %}
+{% if items %}
+<table><thead><tr><th>{{ t('col.severity') }}</th><th>{{ t('col.id') }}</th><th>{{ t('col.package') }}</th><th>{{ t('col.installed') }}</th><th>{{ t('col.fixed') }}</th><th>{{ t('col.host') }}</th><th>{{ t('col.component') }}</th><th>EPSS</th>{% if show_age %}<th>{{ t('col.age') }}</th>{% endif %}</tr></thead><tbody>
+{% for f in items %}
+<tr><td><span class="sev {{ f.severity }}">{{ t('severity.' ~ f.severity) }}</span>{% if f.kev %}<span class="kev">KEV</span>{% endif %}</td>
+<td>{% if f.url %}<a href="{{ f.url }}" rel="noopener noreferrer">{{ f.id }}</a>{% else %}{{ f.id }}{% endif %}<div class="meta">{{ f.title[:120] }}</div></td>
+<td>{{ f.package }}</td><td>{{ f.installed }}</td><td>{{ f.fixed or '–' }}</td><td>{{ f.host }}</td><td>{{ f.component or '–' }}</td>
+<td>{% if f.epss is not none %}{{ '%.1f'|format(f.epss * 100) }}%{% else %}–{% endif %}</td>
+{% if show_age %}<td>{{ f.age_days }} d</td>{% endif %}</tr>
+{% endfor %}</tbody></table>
+{% else %}<div class="empty">{{ t('report.none') }}</div>{% endif %}
+{% endmacro %}
+
+{% macro sevcards(by) %}<div class="cards">{% for s in sevs %}<div class="card"><b>{{ by.get(s, 0) }}</b><span class="sev {{ s }}">{{ t('severity.' ~ s) }}</span></div>{% endfor %}</div>{% endmacro %}
+
+{% if r.kind == 'daily' %}
+  <div class="cards"><div class="card"><b>{{ r.new_count }}</b><span>{{ t('report.new') }}</span></div><div class="card"><b>{{ r.fixed_count }}</b><span>{{ t('report.fixed') }}</span></div><div class="card"><b>{{ r.totals.kev }}</b><span>KEV</span></div></div>
+  <h2>{{ t('report.new') }}</h2>{{ rows(r.new) }}
+  <h2>{{ t('report.fixed') }} ({{ t('report.info') }})</h2>{{ rows(r.fixed) }}
+{% elif r.kind == 'weekly' %}
+  {{ sevcards(r.totals.by_severity) }}
+  {% for sev, hosts in r.groups.items() %}
+    {% for host, items in hosts.items() %}
+      <h2><span class="sev {{ sev }}">{{ t('severity.' ~ sev) }}</span> · {{ host }} · {{ items|length }}</h2>{{ rows(items, show_age=True) }}
+    {% endfor %}
+  {% else %}<h2>{{ t('report.open') }}</h2><div class="empty">{{ t('report.none') }}</div>{% endfor %}
+{% elif r.kind == 'monthly' %}
+  <div class="cards">
+    <div class="card"><b>{{ r.open_count }}</b><span>{{ t('report.open') }}</span></div>
+    <div class="card"><b>{{ r.new_count }}</b><span>{{ t('report.new') }}</span></div>
+    <div class="card"><b>{{ r.fixed_count }}</b><span>{{ t('report.fixed') }}</span></div>
+    <div class="card"><b>{{ r.mttf_days if r.mttf_days is not none else '–' }}</b><span>{{ t('report.mttf') }}</span></div>
+    <div class="card"><b>{{ r.hardening_index if r.hardening_index is not none else '–' }}</b><span>{{ t('report.hardening') }}</span></div>
+    <div class="card"><b>{{ r.auth_total }}</b><span>{{ t('report.auth') }}</span></div>
+  </div>
+  <h2>{{ t('report.by_severity') }}</h2>{{ sevcards(r.totals.by_severity) }}
+  <h2>{{ t('report.by_host') }}</h2>
+  <table><thead><tr><th>{{ t('col.host') }}</th>{% for s in sevs %}<th>{{ t('severity.' ~ s) }}</th>{% endfor %}<th>Σ</th></tr></thead><tbody>
+  {% for h, c in r.totals.by_host.items() %}<tr><td>{{ h }}</td>{% for s in sevs %}<td>{{ c[s] }}</td>{% endfor %}<td>{{ c.total }}</td></tr>{% else %}<tr><td colspan="7">{{ t('report.none') }}</td></tr>{% endfor %}
+  </tbody></table>
+  <h2>{{ t('report.by_kind') }}</h2>
+  <table><tbody>{% for k, n in r.totals.by_kind.items() %}<tr><td>{{ t('kind.' ~ k) }}</td><td>{{ n }}</td></tr>{% else %}<tr><td>{{ t('report.none') }}</td></tr>{% endfor %}</tbody></table>
+  <h2>{{ t('report.comparison') }}</h2>
+  {% if r.comparison %}
+  {% set c = r.comparison %}
+  <table><thead><tr><th></th><th>{{ t('report.delta_prev') }}</th></tr></thead><tbody>
+  <tr><td>{{ t('report.open') }}</td><td class="{{ 'pos' if c.total > 0 else 'neg' if c.total < 0 else '' }}">{{ '%+d'|format(c.total) }}</td></tr>
+  {% for s in sevs %}<tr><td>{{ t('severity.' ~ s) }}</td><td class="{{ 'pos' if c.by_severity.get(s,0) > 0 else 'neg' if c.by_severity.get(s,0) < 0 else '' }}">{{ '%+d'|format(c.by_severity.get(s, 0)) }}</td></tr>{% endfor %}
+  <tr><td>KEV</td><td>{{ '%+d'|format(c.kev) }}</td></tr>
+  <tr><td>{{ t('report.new') }}</td><td>{{ '%+d'|format(c.new) }}</td></tr>
+  <tr><td>{{ t('report.fixed') }}</td><td>{{ '%+d'|format(c.fixed) }}</td></tr>
+  <tr><td>{{ t('report.mttf') }}</td><td>{{ c.mttf_days if c.mttf_days is not none else '–' }}</td></tr>
+  </tbody></table>
+  <h2>{{ t('report.history') }}</h2>
+  <table><thead><tr><th>{{ t('report.period') }}</th><th>{{ t('report.open') }}</th><th>{{ t('report.new') }}</th><th>{{ t('report.fixed') }}</th><th>{{ t('report.mttf') }}</th></tr></thead><tbody>
+  <tr><td><b>{{ r.period }}</b></td><td>{{ r.open_count }}</td><td>{{ r.new_count }}</td><td>{{ r.fixed_count }}</td><td>{{ r.mttf_days if r.mttf_days is not none else '–' }}</td></tr>
+  {% for p in r.previous %}<tr><td>{{ p.period }}</td><td>{{ p.open_count }}</td><td>{{ p.new_count }}</td><td>{{ p.fixed_count }}</td><td>{{ p.mttf_days if p.mttf_days is not none else '–' }}</td></tr>{% endfor %}
+  </tbody></table>
+  {% else %}<div class="empty">{{ t('report.no_previous') }}</div>{% endif %}
+  <h2>{{ t('report.top_open') }}</h2>{{ rows(r.top_open, show_age=True) }}
+{% endif %}
+</body>
+</html>

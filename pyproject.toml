@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secwatch"
+version = "0.1.0"
+description = "Self-hosted security monitoring for small fleets (homelabs, small offices)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "Tech-Maou" }]
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "httpx",
+  "pyyaml",
+  "jinja2",
+  "argon2-cffi",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+secwatch-web = "secwatch.web.app:main"
+secwatch-scan = "secwatch.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["secwatch*"]
+
+[tool.setuptools.package-data]
+secwatch = ["i18n/*.json", "web/static/*", "reports/templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

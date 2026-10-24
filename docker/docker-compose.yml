@@ -1,0 +1,36 @@
+# docker compose -f docker/docker-compose.yml up -d --build
+# Then open http://127.0.0.1:8478 and enter the setup code:
+#   docker compose -f docker/docker-compose.yml exec secwatch cat /var/lib/secwatch/setup-code
+services:
+  secwatch:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: secwatch:latest
+    container_name: secwatch
+    restart: unless-stopped
+    # Only expose the UI locally; put a reverse proxy (TLS) in front for remote access.
+    ports:
+      - "127.0.0.1:8478:8478"
+    environment:
+      TZ: Europe/Berlin
+      # SECWATCH_TOKEN: change-me            # optional API/login token
+      # SECWATCH__notify__ntfy__url: https://ntfy.example.org   # any setting can be locked like this
+    volumes:
+      - secwatch-state:/var/lib/secwatch
+      # host root file system, read-only, for the `os` collector (trivy rootfs)
+      - /:/host:ro
+      # container engine socket for the `containers` collector. NOTE: socket access is
+      # root-equivalent even when mounted :ro - remove this line to disable container scans.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # podman instead of docker:
+      # - /run/podman/podman.sock:/run/podman/podman.sock:ro
+    # To let the exposure/auto-detection see the host's listening ports, use the host network:
+    # network_mode: host
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, DAC_READ_SEARCH, FOWNER, SETUID, SETGID]
+
+volumes:
+  secwatch-state:

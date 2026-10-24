@@ -1,0 +1,11 @@
+# Wakes the scanner up; the real scan/report schedule comes from the configuration.
+[Unit]
+Description=secwatch scheduler wake-up
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

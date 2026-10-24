@@ -1,0 +1,5 @@
+{"host":"hub1","services":[
+ {"description":"DNS-Filter","exposure":"internal","label":"AdGuard","name":"adguard","units":["adguardhome.service"],"url":"https://adguard.example.org"},
+ {"description":"restic","exposure":"none","label":"Backup","name":"backup","units":["restic.service"],"url":null},
+ {"description":"Git & Wiki","exposure":"public","label":"Forgejo","name":"forgejo","units":["forgejo.service"],"url":"https://git.example.org"}
+]}

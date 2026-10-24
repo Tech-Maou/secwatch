@@ -1,0 +1,10 @@
+# "Scan now" / "send test" in the web UI write this trigger file.
+[Unit]
+Description=secwatch scan trigger
+
+[Path]
+PathExists=/var/lib/secwatch/trigger
+Unit=secwatch-scan.service
+
+[Install]
+WantedBy=paths.target

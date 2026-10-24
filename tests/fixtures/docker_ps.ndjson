@@ -1,0 +1,2 @@
+{"Command":"\"/docker-entrypoint.…\"","CreatedAt":"2026-10-20 10:00:00 +0200 CEST","ID":"0123456789ab","Image":"nginx:1.27","Labels":"","LocalVolumes":"0","Mounts":"","Names":"proxy","Networks":"bridge","Ports":"0.0.0.0:80->80/tcp","RunningFor":"4 days ago","Size":"0B","State":"running","Status":"Up 4 days"}
+{"Command":"\"redis-server\"","CreatedAt":"2026-10-20 10:00:00 +0200 CEST","ID":"ba9876543210","Image":"redis:7","Labels":"","Names":"cache,cache-alias","State":"running","Status":"Up 4 days"}
