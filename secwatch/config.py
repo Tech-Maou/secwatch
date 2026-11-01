@@ -14,6 +14,7 @@ Secrets are never stored in the config, only paths to files (keys ending in ``_f
 from __future__ import annotations
 
 import copy
+import ipaddress
 import json
 import logging
 import os
@@ -109,6 +110,11 @@ DEFAULTS: dict[str, Any] = {
         "token_file": "",  # file containing an API/login token (alternative: SECWATCH_TOKEN)
         "session_hours": 12,
         "secure_cookie": False,  # set when served via HTTPS
+        # read-only access without login for clients in these networks (e.g. a VPN), CIDR list;
+        # empty = off. Only meaningful behind a proxy that already restricts who can connect.
+        "read_networks": [],
+        # proxies whose X-Real-IP / X-Forwarded-For header is trusted for the client address
+        "trusted_proxies": ["127.0.0.1", "::1"],
     },
     "schedule": {
         "scan": {"frequency": "daily", "time": "03:30", "weekday": "sun", "monthday": 1},
@@ -474,6 +480,18 @@ def validate_value(path: str, value: Any, languages: list[str] | None = None) ->
                 return f"{path}: each agent needs name and http(s) url"
     if path == "notify.mail.to" and not all(isinstance(x, str) and "@" in x for x in value):
         return f"{path}: list of e-mail addresses"
+    if path == "web.read_networks":
+        try:
+            for x in value:
+                ipaddress.ip_network(str(x), strict=False)
+        except ValueError:
+            return f"{path}: list of networks in CIDR notation (e.g. 10.0.0.0/24)"
+    if path == "web.trusted_proxies":
+        try:
+            for x in value:
+                ipaddress.ip_address(str(x))
+        except ValueError:
+            return f"{path}: list of IP addresses"
     return None
 
 

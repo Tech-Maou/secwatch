@@ -260,6 +260,8 @@ locked. Secrets are only referenced by file path (`*_file`). Check with
 | `web.auth_mode` | `password` | `password` / `token` / `trusted_proxy` |
 | `web.token_file` | `""` | token file (or env `SECWATCH_TOKEN`) |
 | `web.session_hours` / `web.secure_cookie` | `12` / `false` | |
+| `web.read_networks` | `[]` | CIDR list; clients from these networks may **read** overview, findings and reports without logging in (e.g. your VPN), so links in notifications open directly. Settings, wizard and all changes still need a login. Only use behind a proxy that already limits who can connect |
+| `web.trusted_proxies` | `["127.0.0.1", "::1"]` | peers whose `X-Real-IP` / `X-Forwarded-For` is trusted as the client address (the bundled nginx setup proxies from localhost) |
 | `schedule.scan.frequency` / `.time` / `.weekday` / `.monthday` | `daily` / `03:30` / `sun` / `1` | |
 | `schedule.reports.daily` | `{enabled: true, time: "07:00"}` | |
 | `schedule.reports.weekly` | `{enabled: true, weekday: sun, time: "18:00", notify_only_if_open: true}` | |

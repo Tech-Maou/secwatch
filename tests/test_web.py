@@ -220,3 +220,38 @@ def test_agent_test_rejects_arbitrary_token_file(env):
     csrf = login_setup(c, env)
     r = c.post("/api/agents/test", json={"url": "http://127.0.0.1:9", "token_file": "/etc/shadow"}, headers=csrf)
     assert r.status_code == 400 and "unknown token file" in r.text
+
+
+def test_read_networks_without_login(env, monkeypatch):
+    """web.read_networks: GET on reporting endpoints without login from those networks (via trusted proxy)."""
+    seed(env)
+    ov = env / "ov.json"
+    ov.write_text(json.dumps({"settings": {"web": {"read_networks": ["10.99.0.0/24"]}}}))
+    monkeypatch.setenv("SECWATCH_OVERRIDES", str(ov))
+    c = TestClient(create_app(), client=("127.0.0.1", 50000))   # nginx on localhost
+    vpn, lan = {"X-Real-IP": "10.99.0.3"}, {"X-Real-IP": "198.51.100.20"}
+    s = c.get("/api/session", headers=vpn).json()
+    assert s["read_only"] is True and s["authenticated"] is False
+    assert c.get("/api/session", headers=lan).json()["read_only"] is False
+    for path in ("/api/overview", "/api/findings", "/api/reports", "/api/hosts"):
+        assert c.get(path, headers=vpn).status_code == 200, path
+        assert c.get(path, headers=lan).status_code == 401, path
+    key = c.get("/api/findings", headers=vpn).json()["items"][0]["key"]
+    assert c.get(f"/api/findings/{key}", headers=vpn).status_code == 200
+    # everything else still needs a login
+    assert c.get("/api/config", headers=vpn).status_code == 401
+    assert c.post("/api/scan", headers={**vpn, **H}).status_code == 401
+    assert c.post(f"/api/findings/{key}/action", json={"action": "accept"}, headers={**vpn, **H}).status_code == 401
+    # the header is only trusted from a trusted proxy, not from an arbitrary peer
+    c2 = TestClient(create_app(), client=("198.51.100.50", 50000))
+    assert c2.get("/api/overview", headers=vpn).status_code == 401
+    # direct peer inside the network (no proxy) also works
+    c3 = TestClient(create_app(), client=("10.99.0.9", 50000))
+    assert c3.get("/api/overview").status_code == 200
+
+
+def test_read_networks_validation():
+    assert config_mod.validate_value("web.read_networks", ["10.99.0.0/24", "fd00::/64"]) is None
+    assert config_mod.validate_value("web.read_networks", ["nonsense"]) is not None
+    assert config_mod.validate_value("web.trusted_proxies", ["127.0.0.1"]) is None
+    assert config_mod.validate_value("web.trusted_proxies", ["10.0.0.0/8"]) is not None

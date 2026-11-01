@@ -417,5 +417,8 @@
   "group.monthly": "Monatsbericht",
   "group.monthly.help": "Summen, neue/behobene Befunde im Monat und Vergleich mit den Vormonaten. Wird immer erstellt, auch wenn die Benachrichtigung dafür aus ist.",
   "group.retention": "Aufbewahrung",
-  "group.limits": "Grenzen & Filter"
+  "group.limits": "Grenzen & Filter",
+  "nav.login": "Anmelden",
+  "readonly.badge": "Nur lesen",
+  "readonly.hint": "Lesezugriff aus einem vertrauenswürdigen Netz – zum Ändern von Einstellungen oder Funden anmelden"
 }

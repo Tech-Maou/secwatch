@@ -99,9 +99,11 @@ async function boot() {
   try { lang = localStorage.getItem("secwatch.lang") || lang; } catch (e) { /* ignore */ }
   if (!(S.session.languages || []).includes(lang)) lang = S.session.language || "en";
   await loadLang(lang);
-  if (!S.session.authenticated) return renderLogin();
-  try { S.cfg = await api("GET", "/api/config"); } catch (e) { S.cfg = null; }
+  S.ro = !S.session.authenticated && !!S.session.read_only && !S.forceLogin;
+  if (!S.session.authenticated && !S.ro) return renderLogin();
+  if (!S.ro) { try { S.cfg = await api("GET", "/api/config"); } catch (e) { S.cfg = null; } } else S.cfg = null;
   renderShell();
+  if (S.ro) return route();   // read-only: no wizard redirect
   // Changing the hash fires "hashchange" → route(); calling route() as well would render twice.
   if (!S.session.setup_complete && !location.hash.startsWith("#/wizard")) location.hash = "#/wizard";
   else route();
@@ -155,6 +157,9 @@ function langSwitcher() {
   return sel;
 }
 
+// pages a reader (read-only access from web.read_networks, no login) may open
+const READ_PAGES = ["overview", "findings", "reports"];
+
 const NAV = [
   ["overview", "nav.overview"], ["findings", "nav.findings"], ["reports", "nav.reports"], "-",
   ["hardening", "nav.hardening", "lynis"], ["exposure", "nav.exposure", "exposure"], ["secrets", "nav.secrets", "secrets"],
@@ -166,13 +171,15 @@ function renderShell() {
   const root = clear(document.getElementById("root"));
   const rail = h("nav", { class: "rail", "aria-label": "main" },
     h("div", { class: "brand" }, "sec", h("span", null, "watch")),
-    NAV.map(n => n === "-" ? h("div", { class: "sep" }) :
+    NAV.filter(n => !S.ro || n === "-" || READ_PAGES.includes(n[0])).map(n => n === "-" ? h("div", { class: "sep" }) :
       h("a", { href: "#/" + n[0], "data-page": n[0] }, t(n[1]), n[2] ? h("span", { class: "soon" }, t("nav.phase2")) : null)),
     h("div", { class: "sep" }),
-    h("a", { href: "#", onclick: async (e) => { e.preventDefault(); try { await api("POST", "/api/logout"); } catch (x) { /* */ } boot(); } }, t("nav.logout")));
+    S.ro ? h("a", { href: "#", onclick: (e) => { e.preventDefault(); S.forceLogin = true; boot(); } }, t("nav.login"))
+      : h("a", { href: "#", onclick: async (e) => { e.preventDefault(); try { await api("POST", "/api/logout"); } catch (x) { /* */ } boot(); } }, t("nav.logout")));
   const hostSel = h("select", { id: "hostsel", "aria-label": t("header.host"), onchange: (e) => { S.host = e.target.value; route(); } },
     h("option", { value: "" }, t("header.all_hosts")));
-  const scanBtn = h("button", { class: "btn primary", id: "scanbtn", onclick: scanNow }, t("header.scan_now"));
+  const scanBtn = S.ro ? h("span", { class: "meta", title: t("readonly.hint") }, t("readonly.badge"))
+    : h("button", { class: "btn primary", id: "scanbtn", onclick: scanNow }, t("header.scan_now"));
   const header = h("header", { class: "top" }, h("h1", { id: "title" }, ""), h("span", { class: "meta", id: "lastscan" }, ""),
     hostSel, langSwitcher(), scanBtn);
   const main = h("div", { class: "main" }, header, h("div", { class: "content", id: "page" }));
@@ -211,8 +218,9 @@ function parseHash() {
 }
 
 async function route() {
-  if (!S.session || !S.session.authenticated) return;
-  const { page, params } = parseHash();
+  if (!S.session || !(S.session.authenticated || S.ro)) return;
+  let { page, params } = parseHash();
+  if (S.ro && !READ_PAGES.includes(page)) page = "overview";
   if (params.get("host") !== null && params.get("host") !== S.host) S.host = params.get("host");
   document.querySelectorAll(".rail a[data-page]").forEach(a => a.classList.toggle("active", a.dataset.page === page));
   closeDrawer();
@@ -356,7 +364,7 @@ async function openFinding(key) {
       toast(t("action.done")); openFinding(key); route();
     } catch (e) { toast(e.message, true); }
   };
-  const actions = x.state === "open" ? h("div", null,
+  const actions = S.ro ? null : x.state === "open" ? h("div", null,
       h("h3", { class: "mute" }, t("action.title")), h("div", { class: "row" }, reason, until),
       h("div", { class: "row" }, h("button", { class: "btn", onclick: () => act("accept") }, t("action.accept")),
         h("button", { class: "btn", onclick: () => act("false_positive") }, t("action.false_positive"))),

@@ -417,5 +417,8 @@
   "group.monthly": "Monthly report",
   "group.monthly.help": "Totals, new/fixed during the month and comparison with previous months. Always generated, even if its notification is off.",
   "group.retention": "Retention",
-  "group.limits": "Limits & filters"
+  "group.limits": "Limits & filters",
+  "nav.login": "Log in",
+  "readonly.badge": "Read only",
+  "readonly.hint": "Read-only access from a trusted network – log in to change settings or findings"
 }

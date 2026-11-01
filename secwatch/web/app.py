@@ -67,6 +67,12 @@ def _json_body(data: Any, limit: int = 256 * 1024) -> dict:
     return data
 
 
+
+# Endpoints a "reader" (web.read_networks, no login) may GET: overview, findings, reports, hosts, trend, scans.
+# Everything else – config, wizard, actions, detection, writes – still needs a login.
+READ_ONLY_PATHS = re.compile(r"^/api/(overview|findings(/[0-9a-f]{24})?|reports(/\d+/(html|json)|/compare/\d+/\d+)?"
+                             r"|hosts|trend|scans)$")
+
 def create_app(state: Path | None = None) -> FastAPI:
     app = FastAPI(title="secwatch", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     ctx = Ctx(state)
@@ -94,6 +100,10 @@ def create_app(state: Path | None = None) -> FastAPI:
             sess = auth.get_session(ctx.db, request.cookies.get(auth.COOKIE))
             if sess:
                 user, csrf = "admin", sess["csrf"]
+        # read-only without login: only GET on reporting endpoints, only from web.read_networks
+        if user is None and request.method in ("GET", "HEAD") and READ_ONLY_PATHS.match(path) \
+                and auth.read_allowed(cfg, auth.client_ip(cfg, request)):
+            user = "reader"
         request.state.user = user
         request.state.csrf = csrf
         if not public:
@@ -140,7 +150,8 @@ def create_app(state: Path | None = None) -> FastAPI:
     def session(request: Request):
         cfg = cfg_()
         return {
-            "authenticated": request.state.user is not None, "user": request.state.user,
+            "authenticated": request.state.user not in (None, "reader"), "user": request.state.user,
+            "read_only": request.state.user is None and auth.read_allowed(cfg, auth.client_ip(cfg, request)),
             "csrf": request.state.csrf, "version": __version__, "setup_complete": bool(cfg.get("setup_complete")),
             "auth_mode": cfg.get("web.auth_mode"), "needs_setup_code": auth.needs_setup_code(cfg),
             "password_set": bool(cfg.get("web.admin_password_hash")), "token_set": bool(auth.api_token(cfg)),

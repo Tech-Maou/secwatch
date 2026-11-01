@@ -4,6 +4,7 @@ reverse proxy mode, DB-backed sessions, CSRF tokens and the first-run setup code
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import hmac
 import logging
 import os
@@ -51,6 +52,35 @@ def token_ok(cfg, presented: str | None) -> bool:
 def agent_token_ok(cfg, presented: str | None) -> bool:
     tok = read_secret(cfg.get("agent.token_file", ""))
     return bool(tok and presented and hmac.compare_digest(tok.encode(), presented.encode()))
+
+
+def client_ip(cfg, request) -> str:
+    """Address of the actual client: the proxy's X-Real-IP / last X-Forwarded-For entry when the
+    direct peer is a trusted proxy, otherwise the peer itself."""
+    peer = request.client.host if request.client else ""
+    if peer in set(map(str, cfg.get("web.trusted_proxies", []) or [])):
+        real = (request.headers.get("x-real-ip") or "").strip()
+        fwd = [x.strip() for x in (request.headers.get("x-forwarded-for") or "").split(",") if x.strip()]
+        return real or (fwd[-1] if fwd else peer)
+    return peer
+
+
+def read_allowed(cfg, ip: str) -> bool:
+    """True if ip is inside one of web.read_networks (read-only access without login)."""
+    nets = cfg.get("web.read_networks", []) or []
+    if not nets or not ip:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    for n in nets:
+        try:
+            if addr in ipaddress.ip_network(str(n), strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def _h(token: str) -> str:
